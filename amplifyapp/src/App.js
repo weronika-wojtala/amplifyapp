@@ -2,13 +2,28 @@ import React, { useState, useEffect } from "react";
 import "./App.css";
 import { API, Storage } from "aws-amplify";
 import { withAuthenticator, AmplifySignOut } from "@aws-amplify/ui-react";
-import { listNotes } from "./graphql/queries";
+import { listNotes, getNote } from "./graphql/queries";
+//import { listUsers } from "./graphql/queries";
 import {
   createNote as createNoteMutation,
   deleteNote as deleteNoteMutation,
 } from "./graphql/mutations";
+import { AuthState, onAuthUIStateChange } from "@aws-amplify/ui-components";
 
-const initialFormState = { name: "", description: "" };
+let username = "";
+const initialFormState = { name: "", description: "", userid: "" };
+
+onAuthUIStateChange((nextAuthState, authData) => {
+  if (nextAuthState === AuthState.SignedIn) {
+    console.log("user successfully signed in!");
+    console.log("user data: ", authData);
+    username = authData.username;
+    //console.log(username);
+  }
+  if (!authData) {
+    console.log("user is not signed in...");
+  }
+});
 
 function App() {
   const [notes, setNotes] = useState([]);
@@ -18,9 +33,16 @@ function App() {
     fetchNotes();
   }, []);
 
+  // async function checkUser(username) {
+  //   const apiData = await API.graphql({ query: listUsers });
+  //   const notesFromAPI = apiData.data.listUsers.items;
+
+  // }
+
   async function fetchNotes() {
     const apiData = await API.graphql({ query: listNotes });
     const notesFromAPI = apiData.data.listNotes.items;
+    notesFromAPI.filter((note) => note.userid === username);
     await Promise.all(
       notesFromAPI.map(async (note) => {
         if (note.image) {
@@ -39,13 +61,29 @@ function App() {
       query: createNoteMutation,
       variables: { input: formData },
     });
+    console.log(formData);
     if (formData.image) {
       const image = await Storage.get(formData.image);
       formData.image = image;
     }
+    const oneTodo = await API.graphql({
+      query: getNote,
+      variables: { id: "1" },
+    });
+    console.log(oneTodo);
+    if (oneTodo.length === 0) {
+      await API.graphql({
+        query: createNoteMutation,
+        variables: { name: "Some name", description: "Some description" },
+      });
+    }
     setNotes([...notes, formData]);
     setFormData(initialFormState);
   }
+
+  // async function getNote({ id }) {
+  //   const apiData = await API.graphql({ query: getNote({ id: id }) });
+  // }
 
   async function deleteNote({ id }) {
     const newNotesArray = notes.filter((note) => note.id !== id);
@@ -66,16 +104,21 @@ function App() {
 
   return (
     <div className="App">
-      <h1>My Notes App</h1>
+      <h1>{username} Notes App</h1>
       <input
-        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+        onChange={(e) =>
+          setFormData({ ...formData, name: e.target.value, userid: username })
+        }
         placeholder="Note name"
         value={formData.name}
       />
       <input type="file" onChange={onChange} />
       <input
         onChange={(e) =>
-          setFormData({ ...formData, description: e.target.value })
+          setFormData({
+            ...formData,
+            description: e.target.value,
+          })
         }
         placeholder="Note description"
         value={formData.description}

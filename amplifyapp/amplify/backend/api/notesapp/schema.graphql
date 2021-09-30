@@ -1,6 +1,12 @@
 type Note @model {
   id: ID!
+  userid: String!
   name: String!
   description: String
   image: String
+}
+
+type User @model {
+  id: ID!
+  username: String!
 }
