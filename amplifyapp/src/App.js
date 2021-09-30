@@ -2,11 +2,12 @@ import React, { useState, useEffect } from "react";
 import "./App.css";
 import { API, Storage } from "aws-amplify";
 import { withAuthenticator, AmplifySignOut } from "@aws-amplify/ui-react";
-import { listNotes, getNote } from "./graphql/queries";
+import { listNotes, getNote, getUser } from "./graphql/queries";
 //import { listUsers } from "./graphql/queries";
 import {
   createNote as createNoteMutation,
   deleteNote as deleteNoteMutation,
+  createUser as createUserMutation,
 } from "./graphql/mutations";
 import { AuthState, onAuthUIStateChange } from "@aws-amplify/ui-components";
 
@@ -57,26 +58,58 @@ function App() {
 
   async function createNote() {
     if (!formData.name || !formData.description) return;
-    await API.graphql({
-      query: createNoteMutation,
-      variables: { input: formData },
-    });
-    console.log(formData);
-    if (formData.image) {
-      const image = await Storage.get(formData.image);
-      formData.image = image;
-    }
+    // await API.graphql({
+    //   query: createNoteMutation,
+    //   variables: { input: formData },
+    // });
+    // console.log(formData);
+    // if (formData.image) {
+    //   const image = await Storage.get(formData.image);
+    //   formData.image = image;
+    // }
+
+    // -- TU JEST SPRAWDZENIE CZY W TABELI JEST NOTATKA Z DANYM INDEKSEM, NIE MA WIĘC JEST WSTAWIANA INNA
+
+    // const oneTodo = await API.graphql({
+    //   query: getNote,
+    //   variables: { id: "1" },
+    // });
+    // console.log(oneTodo);
+    // if (oneTodo.data.getNote === null) {
+    //   console.log("Tu jest null");
+    //   await API.graphql({
+    //     query: createNoteMutation,
+    //     variables: {
+    //       input: {
+    //         name: "Some name",
+    //         description: "Some description",
+    //         userid: "someUser",
+    //       },
+    //     },
+    //   });
+    // }
+    //--
+
+    // -- TU JEST SPRAWDZENIE CZY W TABELI JEST USER Z DANYM INDEKSEM, NIE MA WIĘC JEST WSTAWIANY INNY
+
     const oneTodo = await API.graphql({
-      query: getNote,
+      query: getUser,
       variables: { id: "1" },
     });
     console.log(oneTodo);
-    if (oneTodo.length === 0) {
+    if (oneTodo.data.getUser === null) {
+      console.log("Tu jest null");
       await API.graphql({
-        query: createNoteMutation,
-        variables: { name: "Some name", description: "Some description" },
+        query: createUserMutation,
+        variables: {
+          input: {
+            id: "1234",
+            username: username,
+          },
+        },
       });
     }
+    //--
     setNotes([...notes, formData]);
     setFormData(initialFormState);
   }
